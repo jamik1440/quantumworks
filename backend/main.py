@@ -7,7 +7,8 @@ from datetime import datetime, timedelta
 import time
 import uuid
 import os
-from . import models, schemas, auth, database
+from backend import models, schemas, auth, database
+
 
 # Import middlewarre
 from backend.middleware import (
