@@ -79,10 +79,14 @@ ALLOWED_ORIGINS = os.getenv(
 
 # Ensure local dev ports are always allowed even if env overrides
 for origin in [
+    origins = [
     "http://localhost:5173",
     "http://localhost:5174",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174"
+    "http://localhost:3000",
+    "https://quantumworks.onrender.com",   # agar frontend Render’da
+    "https://*.vercel.app"                 # agar Vercel’da
+]
+
 ]:
     if origin not in ALLOWED_ORIGINS:
         ALLOWED_ORIGINS.append(origin)
