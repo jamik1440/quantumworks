@@ -84,6 +84,7 @@ for origin in [
     "http://localhost:3000",
     "https://quantumworks.onrender.com",
     "https://quantumworks-backend.onrender.com",
+    "https://quantumworks.vercel.app",
 ]:
     if origin not in ALLOWED_ORIGINS:
         ALLOWED_ORIGINS.append(origin)

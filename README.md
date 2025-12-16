@@ -1,4 +1,6 @@
-# QuantumWorks - Precision Talent. Quantum Speed.
+# QuantumWorks
+[Deployment Guide (Uzbek)](DEPLOY_UZP.md) | [Deployment Checklist](DEPLOYMENT_CHECKLIST.md)
+ - Precision Talent. Quantum Speed.
 
 Modern marketplace platform built with React, TypeScript, Three.js, and cutting-edge web technologies.
 
