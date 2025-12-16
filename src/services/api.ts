@@ -1,6 +1,20 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Determine API URL based on environment
+// If VITE_API_URL is set (Vercel env), use it.
+// If not, check hostname. If localhost, use localhost.
+// If on vercel (but env not set), use production backend.
+const getBaseUrl = () => {
+    if (import.meta.env.VITE_API_URL) {
+        return import.meta.env.VITE_API_URL;
+    }
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:8000';
+    }
+    return 'https://quantumworks-backend.onrender.com';
+};
+
+const API_URL = getBaseUrl();
 
 const api = axios.create({
     baseURL: API_URL,
@@ -33,6 +47,10 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+        // Ensure Content-Type is set if data is present and it's an object (axios does this but good to be explicit)
+        if (config.data && typeof config.data === 'object' && !config.headers['Content-Type']) {
+            config.headers['Content-Type'] = 'application/json';
+        }
         return config;
     },
     (error) => Promise.reject(error)
@@ -63,36 +81,26 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                const refreshToken = localStorage.getItem('refresh_token');
+                const refreshResponse = await api.post('/auth/refresh');
+                const newToken = refreshResponse.data.access_token || refreshResponse.data.token;
 
-                if (!refreshToken) {
-                    throw new Error('No refresh token');
-                }
-
-                const refreshResponse = await axios.post(`${API_URL}/auth/refresh`, {
-                    refresh_token: refreshToken
-                });
-
-                const newToken = refreshResponse.data.access_token;
-                const newRefreshToken = refreshResponse.data.refresh_token;
-
-                if (newToken) {
-                    localStorage.setItem('token', newToken);
-                    if (newRefreshToken) localStorage.setItem('refresh_token', newRefreshToken);
-
-                    api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-                    processQueue(null, newToken);
-                    originalRequest.headers.Authorization = `Bearer ${newToken}`;
-                    return api(originalRequest);
-                }
+                localStorage.setItem('token', newToken);
+                api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+                processQueue(null, newToken);
+                originalRequest.headers.Authorization = `Bearer ${newToken}`;
+                return api(originalRequest);
             } catch (refreshError) {
                 processQueue(refreshError, null);
-                authService.logout();
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                // Redirect using hash router compatible flow
+                window.location.href = '/#/login-register';
                 return Promise.reject(refreshError);
             } finally {
                 isRefreshing = false;
             }
         }
+
         return Promise.reject(error);
     }
 );

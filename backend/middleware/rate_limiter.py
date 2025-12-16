@@ -119,9 +119,15 @@ rate_limiter = RateLimiter()
 
 # Dependency functions for different rate limits
 
+async def get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0]
+    return request.client.host
+
 async def general_rate_limit(request: Request):
     """General rate limit: 100 requests per minute per IP"""
-    client_ip = request.client.host
+    client_ip = await get_client_ip(request)
     await rate_limiter.check_rate_limit(
         key=f"general:{client_ip}",
         max_requests=100,
@@ -131,7 +137,7 @@ async def general_rate_limit(request: Request):
 
 async def login_rate_limit(request: Request):
     """Strict rate limit for login: 5 attempts per 5 minutes per IP"""
-    client_ip = request.client.host
+    client_ip = await get_client_ip(request)
     await rate_limiter.check_rate_limit(
         key=f"login:{client_ip}",
         max_requests=5,
@@ -142,7 +148,7 @@ async def login_rate_limit(request: Request):
 
 async def register_rate_limit(request: Request):
     """Rate limit for registration: 3 accounts per hour per IP"""
-    client_ip = request.client.host
+    client_ip = await get_client_ip(request)
     await rate_limiter.check_rate_limit(
         key=f"register:{client_ip}",
         max_requests=3,
@@ -153,7 +159,7 @@ async def register_rate_limit(request: Request):
 
 async def ai_rate_limit(request: Request):
     """Rate limit for AI endpoints: 10 requests per hour per IP"""
-    client_ip = request.client.host
+    client_ip = await get_client_ip(request)
     await rate_limiter.check_rate_limit(
         key=f"ai:{client_ip}",
         max_requests=10,
@@ -164,7 +170,7 @@ async def ai_rate_limit(request: Request):
 
 async def admin_rate_limit(request: Request):
     """Rate limit for admin endpoints: 50 requests per minute per IP"""
-    client_ip = request.client.host
+    client_ip = await get_client_ip(request)
     await rate_limiter.check_rate_limit(
         key=f"admin:{client_ip}",
         max_requests=50,
