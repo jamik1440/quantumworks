@@ -119,8 +119,8 @@ async def track_visitors(request: Request, call_next):
             value=visitor_id,
             max_age=86400 * 365,
             httponly=True,
-            secure=os.getenv("ENVIRONMENT") == "production",
-            samesite="lax"
+            secure=True,
+            samesite="None"
         )
     return response
 
