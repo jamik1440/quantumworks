@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { authService } from '../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
 const RegisterPage: React.FC = () => {
@@ -11,17 +12,28 @@ const RegisterPage: React.FC = () => {
     });
     const [error, setError] = useState('');
     const navigate = useNavigate();
+    const { login } = useAuth();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             await authService.register(formData);
+
             // Auto login after register
-            await authService.login({ email: formData.email, password: formData.password });
-            navigate('/dashboard');
-            window.location.reload();
-        } catch (err) {
-            setError('Registration failed. Email might be taken.');
+            const data = await authService.login({ email: formData.email, password: formData.password });
+
+            if (data.user && data.access_token) {
+                const userForContext = {
+                    ...data.user,
+                    name: data.user.full_name,
+                    token: data.access_token
+                };
+                login(userForContext, data.access_token);
+                navigate('/dashboard');
+            }
+        } catch (err: any) {
+            console.error(err);
+            setError(err.response?.data?.detail || 'Registration failed. Email might be taken.');
         }
     };
 
@@ -29,7 +41,7 @@ const RegisterPage: React.FC = () => {
 
         <div className="max-w-[400px] mx-auto mt-16 p-8 bg-white rounded-xl shadow-md text-gray-900">
             <h2 className="text-center mb-8 text-2xl font-bold">Join QuantumWorks</h2>
-            {error && <div className="text-red-500 mb-4 text-center">{error}</div>}
+            {error && <div className="text-red-500 mb-4 text-center bg-red-50 p-2 rounded">{error}</div>}
 
             <form onSubmit={handleSubmit}>
                 <div className="mb-4">
@@ -40,7 +52,6 @@ const RegisterPage: React.FC = () => {
                         onChange={e => setFormData({ ...formData, full_name: e.target.value })}
                         required
                         placeholder="Enter your full name"
-                        title="Full Name"
                         className="w-full p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     />
                 </div>
@@ -52,7 +63,6 @@ const RegisterPage: React.FC = () => {
                         onChange={e => setFormData({ ...formData, email: e.target.value })}
                         required
                         placeholder="Enter your email"
-                        title="Email Address"
                         className="w-full p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     />
                 </div>
@@ -64,7 +74,6 @@ const RegisterPage: React.FC = () => {
                         onChange={e => setFormData({ ...formData, password: e.target.value })}
                         required
                         placeholder="Create a password"
-                        title="Password"
                         className="w-full p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     />
                 </div>
