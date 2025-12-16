@@ -129,7 +129,14 @@ const Auth: React.FC = () => {
         setErrors(newErrors);
         showToast(t.common.error, "error");
       } else {
-        const msg = err.response?.data?.detail || err.message || "Unknown Error";
+        let msg = err.response?.data?.detail || err.message || "Unknown Error";
+
+        if (Array.isArray(msg)) {
+          msg = msg.map((e: any) => e.msg).join(', ');
+        } else if (typeof msg === 'object') {
+          msg = JSON.stringify(msg);
+        }
+
         showToast(`${type === 'login' ? 'Login' : 'Register'} Failed: ${msg}`, "error");
       }
     } finally {
