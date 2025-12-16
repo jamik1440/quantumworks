@@ -7,7 +7,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // Crucial for HttpOnly cookies in production
+  withCredentials: true,
 });
 
 // Queue for failed requests during token refresh
@@ -33,6 +33,10 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Ensure Content-Type is set if data is present and it's an object/string (axios does this but good to be explicit)
+    if (config.data && typeof config.data === 'object' && !config.headers['Content-Type']) {
+      config.headers['Content-Type'] = 'application/json';
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -47,7 +51,6 @@ api.interceptors.response.use(
     // Prevent infinite loops
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // If already refreshing, queue this request
         return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
         })
@@ -64,29 +67,20 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Try to refresh token - if refresh endpoint doesn't exist, redirect to login
-        try {
-          const refreshResponse = await api.post('/auth/refresh');
-          const newToken = refreshResponse.data.access_token || refreshResponse.data.token;
+        const refreshResponse = await api.post('/auth/refresh');
+        const newToken = refreshResponse.data.access_token || refreshResponse.data.token;
 
-          localStorage.setItem('token', newToken);
-          api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-          processQueue(null, newToken);
-          return api(originalRequest);
-        } catch (refreshError) {
-          // If refresh fails, redirect to login
-          processQueue(refreshError, null);
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.location.href = '/#/login-register';
-          return Promise.reject(refreshError);
-        }
+        localStorage.setItem('token', newToken);
+        api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+        processQueue(null, newToken);
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        // If refresh fails, force logout
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/#/login-register'; // Hash router redirect
+        // Redirect to login using hash router compatible path
+        window.location.href = '/#/login-register';
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

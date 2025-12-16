@@ -114,13 +114,16 @@ async def track_visitors(request: Request, call_next):
     active_visitors[visitor_id] = time.time()
     response = await call_next(request)
     if not request.cookies.get("visitor_id"):
+        # Determine strictness based on environment/scheme
+        is_secure = request.url.scheme == "https"
+        
         response.set_cookie(
             key="visitor_id",
             value=visitor_id,
             max_age=86400 * 365,
             httponly=True,
-            secure=True,
-            samesite="None"
+            secure=is_secure,
+            samesite="None" if is_secure else "Lax"
         )
     return response
 
